@@ -1,0 +1,72 @@
+/**
+ * main.c
+ */
+
+
+#include "F28x_Project.h"
+#include "math.h"
+
+#define BLINKY_LED_GPIO    110
+
+const float pi = 3.14159265359;
+
+int main(void)
+{
+    DINT;
+    /*CPU1 Emulation Boot Flow; 32 bit wide register named EMUBOOTCTRL located at 0xD00; go to the ram with the programer conecterd xds100v3+*/
+    Uint32 *emubootctrl;
+    emubootctrl = (Uint32 *)0xD00;
+    EALLOW;
+    *emubootctrl = 0x0B5A;
+    EDIS;
+
+    memcpy(&RamfuncsRunStart, &RamfuncsLoadStart, (size_t)&RamfuncsLoadSize);
+    InitFlash();
+
+    InitSysCtrl();
+
+    InitPieVectTable();
+ /////////////////////////////////////////////////////////////////////////
+
+
+    EALLOW;
+    DacaRegs.DACOUTEN.bit.DACOUTEN = 1;
+    DacbRegs.DACOUTEN.bit.DACOUTEN = 1;
+    DaccRegs.DACOUTEN.bit.DACOUTEN = 1;
+    EDIS;
+
+
+
+    GPIO_SetupPinMux(BLINKY_LED_GPIO, GPIO_MUX_CPU1, 0);
+    GPIO_SetupPinOptions(BLINKY_LED_GPIO, GPIO_OUTPUT, GPIO_PUSHPULL);
+
+    while(1)
+    {
+        static float angle;
+        angle += 0.0001*50*pi*2;
+        if(angle >= 2*pi) angle -= 2*pi;
+        float dacval = (sinf(angle)+1)*(float)0xFFF*0.5f;
+        DacbRegs.DACVALS.all = (Uint16)dacval;
+        DELAY_US(100);
+//        //
+//        // Turn on LED
+//        //
+//        GPIO_WritePin(BLINKY_LED_GPIO, 0);
+//
+//        //
+//        // Delay for a bit.
+//        //
+//        DELAY_US(1000*500);
+//
+//        //
+//        // Turn off LED
+//        //
+//        GPIO_WritePin(BLINKY_LED_GPIO, 1);
+//
+//        //
+//        // Delay for a bit.
+//        //
+//        DELAY_US(1000*500);
+    }
+	return 0;
+}
